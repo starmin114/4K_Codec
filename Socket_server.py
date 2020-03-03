@@ -3,7 +3,7 @@ import time
 
 HOST = '127.0.0.1'
 
-PORT = 9999
+PORT = 8080
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -21,14 +21,19 @@ print('Connected by', addr)
 
 state = 0
 while True:
-    data = client_socket.recv(2620728)
+    data = client_socket.recv(2620727)
+    st = time.time_ns()
     if not data:
         break
     
 
     if(state == 'R'):
+        ed = time.time_ns() - st
+        
+        client_socket.send('1'.encode())
+        print(ed)
         print('Message:', data.__sizeof__())
-        client_socket.sendall(data)
+        
         state = 0
     
 
