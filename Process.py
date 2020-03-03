@@ -155,8 +155,8 @@ class Frame:
         except OSError:
             print("cannot make dir" + path)
 
-        MAX_HEIGHT = int(self.video[VideoEnum.WIDTH.value]/64)
-        MAX_WIDTH = int(self.video[VideoEnum.HEIGHT.value]/64)
+        MAX_WIDTH = int(self.video[VideoEnum.WIDTH.value]/64)
+        MAX_HEIGHT = int(self.video[VideoEnum.HEIGHT.value]/64)
         
 
         for i in range(MAX_WIDTH):
