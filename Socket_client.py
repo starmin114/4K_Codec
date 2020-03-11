@@ -4,40 +4,27 @@ import time
 import csv
 import os
 
-HOST = '127.0.0.1'
-# HOST = '1.233.226.101'
 
+HOST = '127.0.0.1'
 PORT = 8080
 
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-
 client_socket.connect((HOST, PORT))
 
-print(client_socket.getblocking())
-
-def ReqTest(buffSz, wr):
-    client_socket.sendall('Req Test'.encode())
-    
-    send = 't' * (buffSz - 33) # 33 + size
+def ReqTest(buffSz):   
+    send = 't' * (buffSz)
     send = send.encode()
     print(send.__sizeof__())
     start = time.time()
     client_socket.sendall(send)
     dur = time.time()
     dur -= start
-    end = client_socket.recv(2620727)
-    if end == send:
-        dur *= 10e-3
-        print(dur)
-        return dur
-    else:
-        print(end.decode())
+    dur *= 10e-3
+    print(dur)
+    return dur
 
-def DownloadTest(wr):
-    client_socket.sendall('Download Test'.encode())
-
+def DownloadTest():
     import cv2
 
     path = "D:\PlayVideo\V1\Frames\F1.png"
@@ -46,61 +33,88 @@ def DownloadTest(wr):
     print(send.__sizeof__())
     start = time.time_ns()
     client_socket.sendall(send)
-    midt = time.time_ns()
-    end = client_socket.recv(1)
     dur = time.time_ns()
     dur -= start
-    if end.decode() == '1':
-        dur *= 10e-9
-        # wr.writerow([dur])
-        print(dur)
-        print((midt-start)*10e-9)
-        return dur
-    else:
-        print(end)
+    dur *= 10e-9
+    print(dur)
+    return dur
 
-csvdirpath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-csvdirpath = os.path.join(csvdirpath, "Result")
-delay = 3
+def PingTest(num, writer):
+    import asyncio
+    t = 0
+    delay = 1/60
+    allt = 0
+    async def wait_for_data(send):
+        loop = asyncio.get_running_loop()
+
+        # Simulate the reception of data from the network
+        for j in range(12):
+            
+            future = []
+            for index in range(num):
+                print(f"[{index}]Sending..")
+                t = time.time()
+                future.append(asyncio.ensure_future(loop.sock_sendall(client_socket, send)))
+                data = await loop.sock_recv(client_socket, 9620727)
+                print(f"[{index}]Received:", data.__sizeof__())
+                if index == 0: allt = t
+                a = delay - time.time() + t
+                # print(a)
+                await asyncio.sleep(a)
+                # Got data, we are done: close the socket
+            
+            b = str(time.time() - allt)
+            writer.writerow([data.__sizeof__(), b])
+            print('total t :: ' + b)
+
+    
+    asyncio.run(wait_for_data(('t' * (16)).encode()))
+    
+    return 1
+
+
+delay = 2
 while True:
-    state = input('r for Req test, d for Download test, e for close')
+    state = input('r for Req test, d for Download test, p for Ping test, e for close')
     if state == 'r':
-        minR = 20
-        maxR = 40
-       
-
-        with open(os.path.join(csvdirpath, "ReqTest_2.csv"), 'w', newline='') as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerow(['Latency'])
-            num = int(input('how many times?'))
-            for i in range(num):
-                dur = 0
-                for j in range(5):
-                    dur += ReqTest(2620725, writer)
-                    print(j+1)
-                    time.sleep(delay)
-                
-                print(dur)
-                writer.writerow([dur])
-                
-                
+        num = int(input('how many times?'))
+        dur = 0
+        client_socket.sendall(f'Req Test'.encode())
+        client_socket.sendall(str(num).encode())
+        time.sleep(delay)
+        for i in range(num):
+            dur += ReqTest(16)
+            print(i+1)
+            time.sleep(delay)
+        print(dur)
                 
     elif state == 'd':
-        with open(os.path.join(csvdirpath, "DownLinkTest_3.csv"), 'w', newline='') as csvFile:
+        num = int(input('how many times?'))
+        dur = 0
+        client_socket.sendall(f'Download Test'.encode())
+        client_socket.sendall(str(num).encode())
+        time.sleep(delay)
+        for i in range(num):
+            dur += DownloadTest()
+            print(i+1)
+            time.sleep(delay)
+        print(dur)
+    
+    elif state == 'p':
+        csvdirpath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        csvdirpath = os.path.join(csvdirpath, "Result")
+        with open(os.path.join(csvdirpath, "PingTest.csv"), 'w', newline='') as csvFile:
             writer = csv.writer(csvFile)
-            writer.writerow(['Latency'])
+            writer.writerow(['Size', 'Latency'])
+            
             num = int(input('how many times?'))
-            for i in range(num):
-                dur = 0
-                for j in range(20):
-                    dur += DownloadTest(writer)
-                    print(j+1)
-                    time.sleep(delay)
-                
-                
-                print(dur)
-                writer.writerow([dur])
-                
+            dur = 0
+            client_socket.sendall(f'Ping Test'.encode())
+            client_socket.sendall(str(num).encode())
+            time.sleep(delay)
+            client_socket.setblocking(False)
+            PingTest(num, writer)
+            client_socket.setblocking(True)
         
     elif state == 'e':
         break

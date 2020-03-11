@@ -68,14 +68,17 @@ class Video:
 
     def getFrames(self, frameFormat, display = True, save = True, Thr = False):
         procs = []
-        # frameCut = 100
-        cntFrame = 0
+        cntFrame = 20000
+        frameCut = cntFrame+100
         if(self.video is not None):
             self.time_start = time.time()
 
-            while(True):
+            while(cntFrame < frameCut):
                 frameExist, frame = self.video.read()
-                if(frameExist):
+                if self.video.get(1) < cntFrame:
+                    print(self.video.get(1))
+                    continue
+                elif(frameExist):
                     framePosByMSec = self.video.get(0)
                     framePosByFrameNumber = int(self.video.get(1))
                     framePosByRatio = self.video.get(2)
@@ -94,14 +97,14 @@ class Video:
                     else:
                         Thr_getFrames(self.time_start, self.METADATA, frame, [framePosByFrameNumber, None ,frameFormat, None, framePosByMSec, framePosByRatio], display, save)
 
+                    cntFrame += 1
                     # print("Process # :: ",len(active_children()))
                 else:
                     break
-
                 # if cv2.waitKey(1) & 0xFF == ord('q'):
                 #     break
 
-                cntFrame += 1
+                
             
             # for proc in procs:
             #     proc.join()

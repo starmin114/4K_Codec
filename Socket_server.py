@@ -1,5 +1,6 @@
 import socket
 import time
+import asyncio
 
 HOST = '127.0.0.1'
 
@@ -17,25 +18,74 @@ server_socket.listen()
 
 client_socket, addr = server_socket.accept()
 
+
+
 print('Connected by', addr)
 
 state = 0
+num = 0
+
+cnt = 0
+
+async def handle(send, index):
+    print(f"[{index}]Sending..{send.__sizeof__()}")
+    client_socket.sendall(send)
+
+async def wait_for_data(num):
+    loop = asyncio.get_running_loop()
+
+    # # Register the open socket to wait for data.
+    # # reader, writer = await asyncio.open_connection(sock=client_socket)
+
+    # # Wait for data
+    # data = await data.recv(100)
+
+    # # Got data, we are done: close the socket
+    # print(f"[{index}]Received:", data.decode())
+
+    # Simulate the reception of data from the network
+
+    # await writer.drain()
+    # cnt += 1
+    
+    # writer.close()
+    # await asyncio.sleep(10)
+    for j in range(12):
+        send = ('t' * (5000 * pow(2,j))).encode()
+        future = []
+
+        for i in range(num):
+            data = await loop.sock_recv(client_socket, 16)
+            print(f"[{i}]Received:", data.decode().__sizeof__())
+            future.append(asyncio.ensure_future(loop.sock_sendall(client_socket, send)))
+            
+        i = 0
+        for f in asyncio.as_completed(future):
+            i += 1
+            await f
+            print(f"[{i}]Sending..{send.__sizeof__()}")
+    
+    # loop.close()
+    
+
 while True:
     data = client_socket.recv(2620727)
-    st = time.time_ns()
     if not data:
         break
     
 
     if(state == 'R'):
-        ed = time.time_ns() - st
-        
-        client_socket.send('1'.encode())
-        print(ed)
+        #client_socket.send('Send Req data.'.encode())
         print('Message:', data.__sizeof__())
-        
-        state = 0
-    
+        num -=1
+        if num==0:
+            state = 0
+    elif(state == 'D'):
+        #client_socket.send('Send Req data.'.encode())
+        print('Message:', data.__sizeof__())
+        num -=1
+        if num==0:
+            state = 0
 
     elif(state == 0):
         if(data.decode() == 'Req Test'):
@@ -43,9 +93,33 @@ while True:
             state = 'R'
         elif(data.decode() == 'Download Test'):
             print('<<Download Latency Test Start!>>')
-            state = 'R'
+            state = 'D'
+        elif(data.decode() == 'Ping Test'):
+            print('<<Ping Latency Test Start!>>')
+            state = 'P'
+
+        data = client_socket.recv(2620727)
+        num = int(data.decode())
         print('Received from Client:', addr, 'Message:', data.decode())
+
     
+    if(state == 'P'):
+        # import cv2
+        # path = "C:\\Users\\jaine\\Desktop\\F1.png"
+        # path = 'D:\PlayVideo\V1\Frames\F1.png'
+        # im = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        # send = cv2.imencode('.png', im)[1].tobytes()
+
+        client_socket.setblocking(False)
+        
+        cnt = 0
+
+        # for i in range(11):
+        asyncio.run(wait_for_data(num))
+            
+        print('end')
+        state = 0
+        client_socket.setblocking(True)
     
 client_socket.close()
 server_socket.close()
