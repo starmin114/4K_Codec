@@ -50,8 +50,8 @@ async def wait_for_data(num):
     
     # writer.close()
     # await asyncio.sleep(10)
-    for j in range(12):
-        send = ('t' * (5000 * pow(2,j))).encode()
+    for j in range(10):
+        send = ('t' * (5000 * pow(2,j+2))).encode()
         future = []
 
         for i in range(num):
@@ -67,6 +67,44 @@ async def wait_for_data(num):
     
     # loop.close()
     
+
+def aDownloadTest(num):
+    import asyncio
+    t = 0
+    delay = 1/60
+    allt = 0
+    async def wait_for_data(send):
+        loop = asyncio.get_running_loop()
+
+        # Simulate the reception of data from the network
+        for j in range(12):
+            send = ('t' * (5000 * pow(2,j))).encode()
+            future = []
+
+            for i in range(num):
+                # data = await loop.sock_recv(client_socket, 16)
+                # print(f"[{i}]Received:", data.decode().__sizeof__())
+                t = time.time()
+                future.append(asyncio.ensure_future(loop.sock_sendall(client_socket, send)))
+                
+                # await loop.sock_sendall(client_socket, send)
+                # print(f"[{i}]Sending..{send.__sizeof__()}")
+                a = delay - time.time() + t
+                print(a)
+                # await asyncio.sleep(a)
+                time.sleep(a)
+
+            i = 0
+            for f in asyncio.as_completed(future):
+                i += 1
+                await f
+                print(f"[{i}]Sending..{send.__sizeof__()}")
+            time.sleep(2)
+
+    
+    asyncio.run(wait_for_data(('t' * (16)).encode()))
+    
+    return 1
 
 while True:
     data = client_socket.recv(2620727)
@@ -97,6 +135,9 @@ while True:
         elif(data.decode() == 'Ping Test'):
             print('<<Ping Latency Test Start!>>')
             state = 'P'
+        elif(data.decode() == 'aDownload Test'):
+            print('<<aDownload Latency Test Start!>>')
+            state = 'aD'
 
         data = client_socket.recv(2620727)
         num = int(data.decode())
@@ -116,6 +157,14 @@ while True:
 
         # for i in range(11):
         asyncio.run(wait_for_data(num))
+            
+        print('end')
+        state = 0
+        client_socket.setblocking(True)
+
+    elif(state == 'aD'):
+        client_socket.setblocking(False)
+        asyncio.run(aDownloadTest(num))
             
         print('end')
         state = 0
